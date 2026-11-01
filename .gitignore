@@ -1,0 +1,5 @@
+activity_settings.json
+activity_stats.json
+venv/
+.vscode/
+__pycache__/
