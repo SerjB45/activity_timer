@@ -1,10 +1,9 @@
-"""Главное окно приложения."""
-
 from __future__ import annotations
 
+import logging
 import sys
 import tkinter as tk
-from tkinter import ttk
+from tkinter import messagebox, ttk
 
 from models import Settings, Stats
 from theme import Styles, Theme
@@ -12,7 +11,15 @@ from timer_service import TimerService
 from ui.stats_tab import StatsTab
 from ui.timer_tab import TimerTab
 
-from config import APP_TITLE, WINDOW_HEIGHT, WINDOW_MIN_HEIGHT, WINDOW_MIN_WIDTH, WINDOW_WIDTH
+from config import (
+    APP_TITLE,
+    STATS_REFRESH_INTERVAL_MS,
+    TICK_INTERVAL_MS,
+    WINDOW_HEIGHT,
+    WINDOW_MIN_HEIGHT,
+    WINDOW_MIN_WIDTH,
+    WINDOW_WIDTH,
+)
 
 
 class MainWindow:
@@ -89,7 +96,6 @@ class MainWindow:
         self._timer_service = TimerService(
             settings=self._settings,
             stats=self._stats,
-            on_notification=self._on_notification,
             on_sound=self._play_sound,
             on_error=self._on_error,
         )
@@ -98,6 +104,7 @@ class MainWindow:
         self._stats_tab.initialize(self._timer_service)
 
         self._start_tick_loop()
+        self._start_stats_refresh_loop()
 
     def _start_tick_loop(self) -> None:
         """Запустить цикл обновлений таймера."""
@@ -105,11 +112,14 @@ class MainWindow:
             return
         state = self._timer_service.tick()
         self._timer_tab.update_state(state)
-        self._stats_tab.update_state(state)
-        self.root.after(150, self._start_tick_loop)
+        self.root.after(TICK_INTERVAL_MS, self._start_tick_loop)
 
-    def _on_notification(self, message: str, color: str) -> None:
-        self._footer_label.configure(text=message, fg=color)
+    def _start_stats_refresh_loop(self) -> None:
+        if self._timer_service is None:
+            return
+        self._stats_tab.update_state()
+        self.root.after(STATS_REFRESH_INTERVAL_MS,
+                        self._start_stats_refresh_loop)
 
     def _on_error(self, message: str) -> None:
         messagebox.showerror("Ошибка настроек", message)
@@ -121,8 +131,9 @@ class MainWindow:
                 winsound.MessageBeep(winsound.MB_OK)
             else:
                 self.root.bell()
-        except Exception:
-            pass
+        except (OSError, RuntimeError, tk.TclError):
+            logging.getLogger(__name__).warning(
+                "Не удалось воспроизвести звук", exc_info=True)
 
     def _on_close(self) -> None:
         if self._timer_service:

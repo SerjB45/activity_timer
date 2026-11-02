@@ -1,5 +1,3 @@
-"""Темы и стили приложения."""
-
 import tkinter as tk
 from tkinter import ttk
 

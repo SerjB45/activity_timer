@@ -1,14 +1,22 @@
-"""Репозитории для хранения данных (JSON)."""
-
 from __future__ import annotations
 
 import json
 import logging
+import math
 from pathlib import Path
 
 from models import DayStats, Settings, Stats
 
-from config import SETTINGS_FILE, STATS_FILE
+from config import (
+    DEFAULT_REST_MINUTES,
+    DEFAULT_WORK_MINUTES,
+    MAX_REST_MINUTES,
+    MAX_WORK_MINUTES,
+    MIN_REST_MINUTES,
+    MIN_WORK_MINUTES,
+    SETTINGS_FILE,
+    STATS_FILE,
+)
 
 logger = logging.getLogger(__name__)
 
@@ -37,6 +45,41 @@ def _save_json(path: Path, data: dict) -> bool:
         return False
 
 
+def _read_int(value: object, default: int, field: str, path: Path) -> int:
+    try:
+        if isinstance(value, bool):
+            raise ValueError("boolean is not an integer setting")
+        return int(value)
+    except (TypeError, ValueError, OverflowError):
+        logger.warning(
+            "Некорректное поле %s в %s; используется %s",
+            field,
+            path.name,
+            default,
+        )
+        return default
+
+
+def _read_float(
+    value: object, default: float, field: str, path: Path
+) -> float:
+    try:
+        if isinstance(value, bool):
+            raise ValueError("boolean is not a numeric statistic")
+        result = float(value)
+        if not math.isfinite(result):
+            raise ValueError("statistic must be finite")
+        return max(0.0, result)
+    except (TypeError, ValueError, OverflowError):
+        logger.warning(
+            "Некорректное поле %s в %s; используется %s",
+            field,
+            path.name,
+            default,
+        )
+        return default
+
+
 # ---------- SettingsRepository ----------
 
 
@@ -44,21 +87,32 @@ class SettingsRepository:
     """Хранение настроек таймера."""
 
     _file: Path = SETTINGS_FILE  # Для тестов можно подменить
-    DEFAULT_WORK = 25
-    DEFAULT_REST = 5
-    MIN_WORK = 1
-    MAX_WORK = 240
-    MIN_REST = 1
-    MAX_REST = 120
+    DEFAULT_WORK = DEFAULT_WORK_MINUTES
+    DEFAULT_REST = DEFAULT_REST_MINUTES
+    MIN_WORK = MIN_WORK_MINUTES
+    MAX_WORK = MAX_WORK_MINUTES
+    MIN_REST = MIN_REST_MINUTES
+    MAX_REST = MAX_REST_MINUTES
 
     @classmethod
     def load(cls) -> Settings:
-        defaults = {"work_minutes": cls.DEFAULT_WORK, "rest_minutes": cls.DEFAULT_REST}
+        defaults = {"work_minutes": cls.DEFAULT_WORK,
+                    "rest_minutes": cls.DEFAULT_REST}
         file_path = getattr(cls, "_file", SETTINGS_FILE)
         data = _load_json(file_path, defaults)
 
-        work = int(data.get("work_minutes", defaults["work_minutes"]))
-        rest = int(data.get("rest_minutes", defaults["rest_minutes"]))
+        work = _read_int(
+            data.get("work_minutes", defaults["work_minutes"]),
+            defaults["work_minutes"],
+            "work_minutes",
+            file_path,
+        )
+        rest = _read_int(
+            data.get("rest_minutes", defaults["rest_minutes"]),
+            defaults["rest_minutes"],
+            "rest_minutes",
+            file_path,
+        )
 
         if cls.MIN_WORK <= work <= cls.MAX_WORK:
             defaults["work_minutes"] = work
@@ -99,9 +153,23 @@ class StatsRepository:
         for key, value in days_data.items():
             if isinstance(value, dict):
                 days[key] = DayStats(
-                    completed_cycles=int(value.get("completed_cycles", 0)),
-                    work_seconds=float(value.get("work_seconds", 0)),
-                    rest_seconds=float(value.get("rest_seconds", 0)),
+                    completed_cycles=max(
+                        0,
+                        _read_int(
+                            value.get("completed_cycles", 0),
+                            0,
+                            "completed_cycles",
+                            file_path,
+                        ),
+                    ),
+                    work_seconds=_read_float(
+                        value.get("work_seconds",
+                                  0), 0.0, "work_seconds", file_path
+                    ),
+                    rest_seconds=_read_float(
+                        value.get("rest_seconds",
+                                  0), 0.0, "rest_seconds", file_path
+                    ),
                 )
             else:
                 days[key] = DayStats()

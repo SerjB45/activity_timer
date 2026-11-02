@@ -1,5 +1,3 @@
-"""Модели данных приложения."""
-
 from __future__ import annotations
 
 import math
@@ -56,7 +54,6 @@ class TimerState:
     running: bool = False
     paused: bool = False
     activity_text: str = ""
-    activity_color: str = ""
     detail_text: str = ""
     progress_fraction: float = 0.0
     cycle_label: str = ""

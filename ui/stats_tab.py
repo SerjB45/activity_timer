@@ -1,12 +1,9 @@
-"""Вкладка статистики."""
-
 from __future__ import annotations
 
 from datetime import date
 
 import tkinter as tk
 
-from models import TimerState
 from theme import Theme
 from timer_service import TimerService
 
@@ -17,6 +14,11 @@ class StatsTab:
     def __init__(self, parent: tk.Widget) -> None:
         self._parent = parent
         self._service: TimerService | None = None
+        self._last_chart_key: tuple[
+            tuple[tuple[str,
+                        int,
+                        date], ...], int, int
+        ] | None = None
 
         self._build_tab()
 
@@ -63,7 +65,7 @@ class StatsTab:
 
         tk.Label(
             outer,
-            text="Статистика сохраняется автоматически и не сбрасывается кнопкой «Стоп».",
+            text="Статистика сохраняется автоматически.",
             bg=Theme.BG, fg=Theme.MUTED, wraplength=760, justify="left",
             font=("Segoe UI", 9),
         ).pack(anchor="w", pady=(12, 0))
@@ -85,13 +87,14 @@ class StatsTab:
         value.pack(anchor="w", pady=(8, 0))
         return value
 
-    def update_state(self, state: TimerState) -> None:
+    def update_state(self) -> None:
         """Обновить UI статистики."""
         if self._service is None:
             return
 
         record = self._service.get_today_stats()
-        self._date_label.configure(text=f"Дата: {date.today().strftime('%d.%m.%Y')}")
+        self._date_label.configure(
+            text=f"Дата: {date.today().strftime('%d.%m.%Y')}")
         self._cycle_value.configure(text=str(record.completed_cycles))
         self._work_value.configure(
             text=self._service.format_minutes(record.work_seconds)
@@ -99,9 +102,17 @@ class StatsTab:
         self._rest_value.configure(
             text=self._service.format_minutes(record.rest_seconds)
         )
-        self._draw_week_chart()
+        week_data = self._service.get_week_data()
+        chart_key = (
+            tuple(week_data),
+            self._week_chart.winfo_width(),
+            self._week_chart.winfo_height(),
+        )
+        if chart_key != self._last_chart_key:
+            self._draw_week_chart(week_data)
+            self._last_chart_key = chart_key
 
-    def _draw_week_chart(self) -> None:
+    def _draw_week_chart(self, week_data: list[tuple[str, int, date]]) -> None:
         canvas = self._week_chart
         canvas.delete("all")
         canvas.update_idletasks()
@@ -109,10 +120,6 @@ class StatsTab:
         width = max(canvas.winfo_width(), 420)
         height = max(canvas.winfo_height(), 170)
 
-        if self._service is None:
-            return
-
-        week_data = self._service.get_week_data()
         values = [v for _, v, _ in week_data]
         day_names = [n for n, _, _ in week_data]
         days = [d for _, _, d in week_data]
@@ -154,5 +161,3 @@ class StatsTab:
                     center, bottom - bar_height - 10, text=str(value),
                     fill=Theme.TEXT, font=("Segoe UI", 8),
                 )
-
-

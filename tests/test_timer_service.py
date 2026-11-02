@@ -1,33 +1,38 @@
-"""Тесты TimerService."""
-
 import time
 import unittest
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 from models import Settings, Stats, TimerState
+from config import STATS_SAVE_INTERVAL_SECONDS
 from timer_service import TimerService
+
+
+_stats_save_patcher = patch("timer_service.StatsRepository.save")
+
+
+def setUpModule() -> None:
+    _stats_save_patcher.start()
+
+
+def tearDownModule() -> None:
+    _stats_save_patcher.stop()
 
 
 def _make_service(
     work_minutes: int = 25,
     rest_minutes: int = 5,
-    **kwargs,
 ) -> TimerService:
     """Создать TimerService с mock-коллбэками."""
-    on_notification = MagicMock()
     on_sound = MagicMock()
     on_error = MagicMock()
-    for k, v in kwargs.items():
-        setattr(TimerService.__init__, f"_{k}", v)
 
     service = TimerService(
-        settings=Settings(work_minutes=work_minutes, rest_minutes=rest_minutes),
+        settings=Settings(work_minutes=work_minutes,
+                          rest_minutes=rest_minutes),
         stats=Stats(),
-        on_notification=on_notification,
         on_sound=on_sound,
         on_error=on_error,
     )
-    service._on_notification = on_notification
     service._on_sound = on_sound
     service._on_error = on_error
     return service
@@ -75,9 +80,10 @@ class TestTimerServiceStart(unittest.TestCase):
     def test_start_does_not_restart_if_already_running(self) -> None:
         service = _make_service()
         service.start()
-        running_before = service.running
+        remaining_before = service.remaining
         service.start()
         self.assertTrue(service.running)
+        self.assertEqual(service.remaining, remaining_before)
 
 
 class TestTimerServicePauseResume(unittest.TestCase):
@@ -247,6 +253,17 @@ class TestTimerServiceTick(unittest.TestCase):
         state = service.tick()
         self.assertEqual(state.activity_text, "ВРЕМЯ РАБОТАТЬ")
 
+    def test_stats_are_saved_periodically_not_on_every_tick(self) -> None:
+        service = _make_service()
+        service._last_accounted_at = 0.0
+        service._last_stats_save_at = 0.0
+
+        with patch.object(service, "_save_stats") as save_stats:
+            service._account_elapsed(STATS_SAVE_INTERVAL_SECONDS - 1)
+            save_stats.assert_not_called()
+            service._account_elapsed(STATS_SAVE_INTERVAL_SECONDS + 1)
+            save_stats.assert_called_once_with(STATS_SAVE_INTERVAL_SECONDS + 1)
+
 
 class TestTimerServicePhaseTransition(unittest.TestCase):
     """Проверка перехода между фазами."""
@@ -351,7 +368,6 @@ class TestGetWeekData(unittest.TestCase):
         self.assertEqual(last_day, date.today())
 
     def test_week_data_day_names_match_dates(self) -> None:
-        from datetime import date, timedelta
         from config import DAY_NAMES_RU
 
         service = _make_service()
@@ -359,8 +375,10 @@ class TestGetWeekData(unittest.TestCase):
 
         for idx, (name, _, day_obj) in enumerate(data):
             expected_name = DAY_NAMES_RU[day_obj.weekday()]
-            self.assertEqual(name, expected_name,
-                             f"Day {idx}: expected {expected_name} for {day_obj}")
+            self.assertEqual(
+                name, expected_name,
+                f"Day {idx}: expected {expected_name} for {day_obj}"
+            )
 
     def test_week_data_first_entry_is_6_days_ago(self) -> None:
         from datetime import date, timedelta

@@ -1,5 +1,3 @@
-"""Вкладка таймера."""
-
 from __future__ import annotations
 
 import tkinter as tk
@@ -9,7 +7,9 @@ from models import TimerState
 from theme import Theme
 from timer_service import TimerService
 
-from config import MAX_WORK_MINUTES, MAX_REST_MINUTES, MIN_WORK_MINUTES, MIN_REST_MINUTES
+from config import (
+    MAX_WORK_MINUTES, MAX_REST_MINUTES, MIN_WORK_MINUTES, MIN_REST_MINUTES
+)
 
 
 class TimerTab:
@@ -155,7 +155,7 @@ class TimerTab:
         self._rest_spin.configure(state=state)
 
     def _read_settings(self) -> tuple[int, int] | None:
-        """Прочитать значения из UI. Возвращает (work, rest) или None при ошибке."""
+        """Прочитать значения из UI."""
         try:
             work = int(self._work_var.get())
             rest = int(self._rest_var.get())
@@ -188,7 +188,8 @@ class TimerTab:
             self._start_button.configure(state="disabled")
             self._pause_button.configure(state="normal", text="\u2062  Пауза")
             if self._footer_label:
-                self._footer_label.configure(text="● Таймер запущен", fg=Theme.GREEN)
+                self._footer_label.configure(
+                    text="● Таймер запущен", fg=Theme.GREEN)
 
     def _on_pause_resume(self) -> None:
         if self._service is None:
@@ -200,22 +201,26 @@ class TimerTab:
             self._service.pause()
             self._pause_button.configure(text="\u25b6  Продолжить")
             if self._footer_label:
-                self._footer_label.configure(text="Ⅱ Таймер на паузе", fg=Theme.BLUE)
+                self._footer_label.configure(
+                    text="Ⅱ Таймер на паузе", fg=Theme.BLUE)
         else:
             self._service.resume()
             self._pause_button.configure(text="\u2062  Пауза")
             if self._footer_label:
-                self._footer_label.configure(text="● Таймер запущен", fg=Theme.GREEN)
+                self._footer_label.configure(
+                    text="● Таймер запущен", fg=Theme.GREEN)
 
     def _on_stop(self) -> None:
         if self._service:
             self._service.stop()
             self._set_settings_enabled(True)
             self._start_button.configure(state="normal")
-            self._pause_button.configure(state="disabled", text="\u2062  Пауза")
+            self._pause_button.configure(
+                state="disabled", text="\u2062  Пауза")
             if self._footer_label:
                 self._footer_label.configure(
-                    text="✓ Таймер сброшен; статистика сохранена", fg=Theme.GREEN
+                    text="✓ Таймер сброшен; статистика сохранена",
+                    fg=Theme.GREEN
                 )
 
     def update_state(self, state: TimerState) -> None:
@@ -232,7 +237,13 @@ class TimerTab:
             color = Theme.BLUE
 
         self._activity_label.configure(text=state.activity_text, fg=color)
-        self._timer_label.configure(text=self._service.get_formatted_timer() if self._service else "00:00")
+        self._timer_label.configure(
+            text=(
+                self._service.get_formatted_timer()
+                if self._service
+                else "00:00"
+            )
+        )
         self._phase_detail.configure(text=state.detail_text)
 
         # Progress bar
@@ -240,12 +251,15 @@ class TimerTab:
 
         # Cycle info
         self._cycle_label.configure(text=state.cycle_label)
-        self._today_cycle_label.configure(text=state.today_cycles)
+        self._today_cycle_label.configure(
+            text=f"Сегодня завершено: {state.today_cycles}"
+        )
 
     def _update_progress(self, fraction: float, color: str) -> None:
         self._progress.delete("all")
         width = max(self._progress.winfo_width(), 340)
-        self._progress.create_rectangle(0, 3, width, 11, fill=Theme.PANEL_ALT, outline="")
+        self._progress.create_rectangle(
+            0, 3, width, 11, fill=Theme.PANEL_ALT, outline="")
         self._progress.create_rectangle(
             0, 3, width * fraction, 11, fill=color, outline=""
         )

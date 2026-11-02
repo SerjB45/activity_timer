@@ -1,5 +1,3 @@
-"""Константы и настройки приложения."""
-
 from pathlib import Path
 
 # Пути
@@ -19,6 +17,8 @@ MAX_REST_MINUTES = 120
 
 # Параметры таймера
 TICK_INTERVAL_MS = 150
+STATS_REFRESH_INTERVAL_MS = 1_000
+STATS_SAVE_INTERVAL_SECONDS = 30
 MAX_PHASE_TRANSITIONS = 100
 
 # Дни недели (русский)

@@ -1,15 +1,27 @@
-"""Тесты Storage (SettingsRepository, StatsRepository)."""
-
 import json
 import tempfile
 import unittest
 from pathlib import Path
 
 from models import DayStats, Settings, Stats
+from config import SETTINGS_FILE, STATS_FILE
 from storage import SettingsRepository, StatsRepository
 
 
-class TestSettingsRepositoryLoad(unittest.TestCase):
+class _RepositoryTestCase(unittest.TestCase):
+    def setUp(self) -> None:
+        self._settings_file = SettingsRepository._file
+        self._stats_file = StatsRepository._file
+        SettingsRepository._file = SETTINGS_FILE
+        StatsRepository._file = STATS_FILE
+        self.addCleanup(self._restore_repository_paths)
+
+    def _restore_repository_paths(self) -> None:
+        SettingsRepository._file = self._settings_file
+        StatsRepository._file = self._stats_file
+
+
+class TestSettingsRepositoryLoad(_RepositoryTestCase):
     """Проверка загрузки настроек."""
 
     def test_load_defaults_when_file_missing(self) -> None:
@@ -24,7 +36,8 @@ class TestSettingsRepositoryLoad(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             filepath = Path(tmpdir) / "settings.json"
             SettingsRepository._file = filepath
-            filepath.write_text(json.dumps({"work_minutes": 45, "rest_minutes": 10}))
+            filepath.write_text(json.dumps(
+                {"work_minutes": 45, "rest_minutes": 10}))
             settings = SettingsRepository.load()
             self.assertEqual(settings.work_minutes, 45)
             self.assertEqual(settings.rest_minutes, 10)
@@ -33,7 +46,8 @@ class TestSettingsRepositoryLoad(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             filepath = Path(tmpdir) / "settings.json"
             SettingsRepository._file = filepath
-            filepath.write_text(json.dumps({"work_minutes": 0, "rest_minutes": 5}))
+            filepath.write_text(json.dumps(
+                {"work_minutes": 0, "rest_minutes": 5}))
             settings = SettingsRepository.load()
             self.assertEqual(settings.work_minutes, 25)
 
@@ -41,7 +55,8 @@ class TestSettingsRepositoryLoad(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             filepath = Path(tmpdir) / "settings.json"
             SettingsRepository._file = filepath
-            filepath.write_text(json.dumps({"work_minutes": 300, "rest_minutes": 5}))
+            filepath.write_text(json.dumps(
+                {"work_minutes": 300, "rest_minutes": 5}))
             settings = SettingsRepository.load()
             self.assertEqual(settings.work_minutes, 25)
 
@@ -49,7 +64,8 @@ class TestSettingsRepositoryLoad(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             filepath = Path(tmpdir) / "settings.json"
             SettingsRepository._file = filepath
-            filepath.write_text(json.dumps({"work_minutes": 25, "rest_minutes": 0}))
+            filepath.write_text(json.dumps(
+                {"work_minutes": 25, "rest_minutes": 0}))
             settings = SettingsRepository.load()
             self.assertEqual(settings.rest_minutes, 5)
 
@@ -57,7 +73,8 @@ class TestSettingsRepositoryLoad(unittest.TestCase):
         with tempfile.TemporaryDirectory() as tmpdir:
             filepath = Path(tmpdir) / "settings.json"
             SettingsRepository._file = filepath
-            filepath.write_text(json.dumps({"work_minutes": 25, "rest_minutes": 200}))
+            filepath.write_text(json.dumps(
+                {"work_minutes": 25, "rest_minutes": 200}))
             settings = SettingsRepository.load()
             self.assertEqual(settings.rest_minutes, 5)
 
@@ -77,8 +94,18 @@ class TestSettingsRepositoryLoad(unittest.TestCase):
             settings = SettingsRepository.load()
             self.assertEqual(settings.work_minutes, 25)
 
+    def test_load_invalid_field_uses_default(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            filepath = Path(tmpdir) / "settings.json"
+            SettingsRepository._file = filepath
+            filepath.write_text(json.dumps(
+                {"work_minutes": None, "rest_minutes": "invalid"}))
+            settings = SettingsRepository.load()
+            self.assertEqual(settings.work_minutes, 25)
+            self.assertEqual(settings.rest_minutes, 5)
 
-class TestSettingsRepositorySave(unittest.TestCase):
+
+class TestSettingsRepositorySave(_RepositoryTestCase):
     """Проверка сохранения настроек."""
 
     def test_save_writes_file(self) -> None:
@@ -111,7 +138,7 @@ class TestSettingsRepositorySave(unittest.TestCase):
             self.assertEqual(loaded.rest_minutes, 15)
 
 
-class TestStatsRepositoryLoad(unittest.TestCase):
+class TestStatsRepositoryLoad(_RepositoryTestCase):
     """Проверка загрузки статистики."""
 
     def test_load_defaults_when_file_missing(self) -> None:
@@ -150,8 +177,26 @@ class TestStatsRepositoryLoad(unittest.TestCase):
             stats = StatsRepository.load()
             self.assertEqual(len(stats.days), 0)
 
+    def test_load_invalid_fields_uses_defaults(self) -> None:
+        with tempfile.TemporaryDirectory() as tmpdir:
+            filepath = Path(tmpdir) / "stats.json"
+            StatsRepository._file = filepath
+            filepath.write_text(json.dumps({
+                "days": {
+                    "2025-01-01": {
+                        "completed_cycles": "invalid",
+                        "work_seconds": float("nan"),
+                        "rest_seconds": None,
+                    }
+                }
+            }))
+            record = StatsRepository.load().days["2025-01-01"]
+            self.assertEqual(record.completed_cycles, 0)
+            self.assertEqual(record.work_seconds, 0.0)
+            self.assertEqual(record.rest_seconds, 0.0)
 
-class TestStatsRepositorySave(unittest.TestCase):
+
+class TestStatsRepositorySave(_RepositoryTestCase):
     """Проверка сохранения статистики."""
 
     def test_save_writes_file(self) -> None:
@@ -182,7 +227,7 @@ class TestStatsRepositorySave(unittest.TestCase):
             self.assertEqual(record.work_seconds, 4500.0)
 
 
-class TestStatsToday(unittest.TestCase):
+class TestStatsToday(_RepositoryTestCase):
     """Проверка получения сегодняшней статистики."""
 
     def test_today_creates_record(self) -> None:

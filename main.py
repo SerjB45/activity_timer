@@ -1,9 +1,5 @@
-"""Точка входа приложения."""
-
 import logging
-import sys
 
-from models import Settings, Stats
 from storage import SettingsRepository, StatsRepository
 from ui.main_window import MainWindow
 
