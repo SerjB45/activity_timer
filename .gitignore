@@ -1,0 +1,8 @@
+activity_settings.json
+activity_stats.json
+venv/
+.vscode/
+__pycache__/
+activity_timer.spec
+dist/
+build/
