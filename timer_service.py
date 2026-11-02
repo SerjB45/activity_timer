@@ -50,8 +50,6 @@ class TimerService:
         self._cycle_rest_seconds: float = 0.0
         self._last_stats_save_at: float | None = None
 
-    # ---------- Properties ----------
-
     @property
     def phase(self) -> Phase:
         return self._phase
@@ -75,8 +73,6 @@ class TimerService:
     @property
     def stats(self) -> Stats:
         return self._stats
-
-    # ---------- Actions ----------
 
     def start(self) -> None:
         """Запустить таймер."""
@@ -216,8 +212,6 @@ class TimerService:
         self._phase_started_at = now
         self._last_accounted_at = now
 
-    # ---------- Internal ----------
-
     def _phase_duration(self) -> float:
         minutes = (
             self._settings.work_minutes if self._phase == "work"
@@ -273,7 +267,7 @@ class TimerService:
         running = self._running
         paused = self._paused
 
-        # Activity text
+        # Теущее состояние активности
         if not running:
             activity_text = "ГОТОВ К РАБОТЕ"
         elif paused:
@@ -283,7 +277,7 @@ class TimerService:
         else:
             activity_text = "ВРЕМЯ ОТДЫХАТЬ"
 
-        # Detail text
+        # Подробный текст
         if paused:
             detail_text = "Отсчёт приостановлен — нажми «Продолжить»"
         elif not running:
@@ -293,14 +287,14 @@ class TimerService:
         else:
             detail_text = "Восстановись перед следующим циклом"
 
-        # Progress
+        # Прогресс
         if phase == "work":
             total = max(1, self._settings.work_minutes * 60)
         else:
             total = max(1, self._settings.rest_minutes * 60)
         progress_fraction = min(1.0, max(0.0, self._remaining / total))
 
-        # Cycle info
+        # Информация о цикле
         record = self._stats.today()
         cycle_phase = "работа" if phase == "work" else "отдых"
         cycle_label = f"Текущий цикл: {cycle_phase}"

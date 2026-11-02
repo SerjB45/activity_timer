@@ -80,9 +80,6 @@ def _read_float(
         return default
 
 
-# ---------- SettingsRepository ----------
-
-
 class SettingsRepository:
     """Хранение настроек таймера."""
 
@@ -129,9 +126,6 @@ class SettingsRepository:
             "rest_minutes": int(settings.rest_minutes),
         }
         return _save_json(file_path, data)
-
-
-# ---------- StatsRepository ----------
 
 
 class StatsRepository:

@@ -35,7 +35,7 @@ class TimerTab:
         self._outer = outer
         outer.pack(fill="both", expand=True, padx=10, pady=10)
 
-        # ---------- Settings card ----------
+        # Настройки карточек
         settings_card = tk.Frame(outer, bg=Theme.PANEL, padx=18, pady=14)
         settings_card.pack(fill="x", pady=(0, 14))
 
@@ -74,7 +74,7 @@ class TimerTab:
         self._rest_spin.bind("<FocusOut>", self._on_settings_change)
         self._rest_spin.bind("<Return>", self._on_settings_change)
 
-        # ---------- Timer display ----------
+        # Дисплей таймера
         self._activity_label = tk.Label(
             outer, text="ГОТОВ К РАБОТЕ", bg=Theme.BG, fg=Theme.MUTED,
             font=("Segoe UI", 11, "bold"),
@@ -99,7 +99,7 @@ class TimerTab:
         )
         self._phase_detail.pack(pady=(0, 14))
 
-        # ---------- Buttons ----------
+        # Кнопки 
         buttons = tk.Frame(outer, bg=Theme.BG)
         buttons.pack()
 
@@ -130,7 +130,7 @@ class TimerTab:
         )
         self._stop_button.pack(side="left", padx=5)
 
-        # ---------- Summary ----------
+        # Строка текущейстатистики
         summary = tk.Frame(outer, bg=Theme.PANEL, padx=18, pady=12)
         summary.pack(fill="x", pady=(18, 0))
         self._cycle_label = tk.Label(
@@ -225,7 +225,7 @@ class TimerTab:
 
     def update_state(self, state: TimerState) -> None:
         """Обновить UI по состоянию таймера."""
-        # Activity label
+        # Метка активности
         if state.phase == "work":
             color = Theme.CORAL
         else:
@@ -246,10 +246,10 @@ class TimerTab:
         )
         self._phase_detail.configure(text=state.detail_text)
 
-        # Progress bar
+        # Панель прогресса
         self._update_progress(state.progress_fraction, color)
 
-        # Cycle info
+        # Информация о цикле
         self._cycle_label.configure(text=state.cycle_label)
         self._today_cycle_label.configure(
             text=f"Сегодня завершено: {state.today_cycles}"

@@ -128,7 +128,7 @@ class StatsTab:
         left, right, top, bottom = 35, width - 18, 18, height - 32
         chart_height = bottom - top
 
-        # Grid lines
+        # Линия таблицы
         for tick in range(4):
             y = bottom - chart_height * tick / 3
             canvas.create_line(left, y, right, y, fill="#3B3E4B")
@@ -137,7 +137,7 @@ class StatsTab:
                 fill=Theme.MUTED, font=("Segoe UI", 8), anchor="e",
             )
 
-        # Bars
+        # Строка дней
         slot_width = (right - left) / 7
         bar_width = min(28, slot_width * 0.58)
         today_str = date.today().isoformat()
